@@ -45,7 +45,7 @@ class LoginWindow(QWidget):
             QMessageBox.warning(self, "Ошибка", "Введите данные")
             return
 
-        # hashed_password = hashlib.sha256(password.encode()).hexdigest()
+        hashed_password = hashlib.sha256(password.encode()).hexdigest()
 
         conn = get_connection()
         cur = conn.cursor()
@@ -55,7 +55,7 @@ class LoginWindow(QWidget):
                 SELECT employee_id, employee_role
                 FROM employees
                 WHERE username = %s AND password = %s
-            """, (username, password)) #hashed_password
+            """, (username, hashed_password))
 
             user = cur.fetchone()
 

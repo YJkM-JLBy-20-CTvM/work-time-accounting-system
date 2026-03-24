@@ -8,6 +8,7 @@ from db_connection import get_connection
 from ui.change_password_window import ChangePasswordWindow
 import hashlib
 
+
 class EmployeeWindow(QWidget):
     def __init__(self, employee_id):
         super().__init__()
