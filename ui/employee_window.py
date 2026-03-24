@@ -5,6 +5,7 @@ from PyQt5.QtWidgets import (
 )
 from PyQt5.QtCore import QDate, QTime
 from db_connection import get_connection
+from ui.change_password_window import ChangePasswordWindow
 import hashlib
 
 class EmployeeWindow(QWidget):
@@ -17,6 +18,11 @@ class EmployeeWindow(QWidget):
         self.resize(400, 450)
 
         layout = QVBoxLayout()
+        
+        self.btn_change_password = QPushButton("Сменить пароль")
+        self.btn_change_password.clicked.connect(self.open_change_password)
+        
+        layout.addWidget(self.btn_change_password)
 
         layout.addWidget(QLabel("Дата:"))
         self.date_edit = QDateEdit()
@@ -125,7 +131,11 @@ class EmployeeWindow(QWidget):
         finally:
             cur.close()
             conn.close()
-
+            
+    def open_change_password(self):
+        self.change_password_window = ChangePasswordWindow(self.employee_id)
+        self.change_password_window.show()
+                
     def view_work_time(self):
         conn = get_connection()
         cur = conn.cursor()
