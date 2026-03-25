@@ -25,9 +25,6 @@ class ReportWindow(QWidget):
             "По отделу"
         ])
 
-        layout.addWidget(QLabel("Тип отчёта:"))
-        layout.addWidget(self.report_type)
-
         self.employee_combo = QComboBox()
         layout.addWidget(QLabel("Сотрудник:"))
         layout.addWidget(self.employee_combo)
@@ -115,18 +112,19 @@ class ReportWindow(QWidget):
             date_to = self.date_to.date().toPyDate()
 
             query = """
-                SELECT e.last_name, e.first_name,
-                       d.department_name,
-                       w.record_date,
-                       w.arrival_time,
-                       w.departure_time
+                SELECT e.employee_id,
+                    e.last_name, e.first_name,
+                    d.department_name,
+                    w.record_date,
+                    w.arrival_time,
+                    w.departure_time
                 FROM employees e
                 JOIN departments d ON e.department_id = d.department_id
                 JOIN work_time_accounting w ON e.employee_id = w.employee_id
-                WHERE 1=1
+                WHERE w.record_date BETWEEN %s AND %s
             """
 
-            params = []
+            params = [date_from, date_to]
 
             if employee_id:
                 query += " AND e.employee_id = %s"
@@ -135,10 +133,6 @@ class ReportWindow(QWidget):
             if department_id:
                 query += " AND e.department_id = %s"
                 params.append(department_id)
-
-            if date_from and date_to:
-                query += " AND w.record_date BETWEEN %s AND %s"
-                params.extend([date_from, date_to])
 
             query += " ORDER BY e.last_name, w.record_date"
 
@@ -173,13 +167,8 @@ class ReportWindow(QWidget):
             doc.add_paragraph("")
 
             headers = [
-                "Фамилия",
-                "Имя",
-                "Отдел",
-                "Дата",
-                "Приход",
-                "Уход",
-                "Часы"
+                "Фамилия", "Имя", "Отдел",
+                "Дата", "Приход", "Уход", "Часы"
             ]
 
             table = doc.add_table(rows=len(rows) + 1, cols=len(headers))
@@ -188,8 +177,12 @@ class ReportWindow(QWidget):
             for col, header in enumerate(headers):
                 table.cell(0, col).text = header
 
+            employee_totals = {}
+
+            total_minutes_all = 0
+
             for i, row in enumerate(rows):
-                last_name, first_name, department, date, arrival, departure = row
+                emp_id, last_name, first_name, department, date, arrival, departure = row
 
                 if arrival and departure:
                     total_minutes = (
@@ -202,6 +195,13 @@ class ReportWindow(QWidget):
                     minutes = total_minutes % 60
 
                     work_time = f"{hours} ч {minutes} мин"
+
+                    total_minutes_all += total_minutes
+
+                    if emp_id not in employee_totals:
+                        employee_totals[emp_id] = 0
+                    employee_totals[emp_id] += total_minutes
+
                 else:
                     work_time = "—"
 
@@ -217,13 +217,27 @@ class ReportWindow(QWidget):
 
                 for j, value in enumerate(values):
                     table.cell(i + 1, j).text = str(value)
-                    if hasattr(value, "strftime"):
-                        if "time" in str(type(value)):
-                            value = value.strftime("%H:%M")
-                        else:
-                            value = value.strftime("%d.%m.%Y")
 
-                    table.cell(i + 1, j).text = str(value)
+            doc.add_paragraph("\nИтого по сотрудникам:")
+
+            for emp_id, minutes in employee_totals.items():
+                hours = minutes // 60
+                mins = minutes % 60
+
+                cur.execute("""
+                    SELECT last_name, first_name
+                    FROM employees
+                    WHERE employee_id = %s
+                """, (emp_id,))
+                last, first = cur.fetchone()
+
+                doc.add_paragraph(f"{last} {first}: {hours} ч {mins} мин")
+
+            total_hours = total_minutes_all // 60
+            total_minutes = total_minutes_all % 60
+
+            doc.add_paragraph("\n----------------------")
+            doc.add_paragraph(f"ОБЩИЙ ИТОГ: {total_hours} ч {total_minutes} мин")
 
             doc.save(file_path)
 

@@ -80,7 +80,7 @@ class LoginWindow(QWidget):
         if role == "employee":
             self.window = EmployeeWindow(employee_id)
         elif role == "admin":
-            self.window = AdminWindow()
+            self.window = AdminWindow(employee_id)
         else:
             QMessageBox.warning(self, "Ошибка", "Неизвестная роль")
             return

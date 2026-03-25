@@ -1,24 +1,29 @@
 from PyQt5.QtWidgets import (
     QWidget, QVBoxLayout, QLabel, QPushButton,
-    QComboBox, QTextEdit, QMessageBox, QFileDialog
+    QComboBox, QTextEdit, QMessageBox
 )
-from docx import Document
-from datetime import datetime
 from db_connection import get_connection
 from ui.employee_crud_window import EmployeeCRUD
 from ui.department_crud_window import DepartmentCRUD
 from ui.position_crud_window import PositionCRUD
 from ui.report_window import ReportWindow
+from ui.change_password_window import ChangePasswordWindow
 
 
 class AdminWindow(QWidget):
-    def __init__(self):
+    def __init__(self, admin_id):
         super().__init__()
+        
+        self.admin_id = admin_id
 
         self.setWindowTitle("Окно администратора")
         self.resize(500, 500)
 
         layout = QVBoxLayout()
+        
+        self.bnt_change_password = QPushButton("Сменить пароль")
+        self.bnt_change_password.clicked.connect(self.open_change_password_window)
+        layout.addWidget(self.bnt_change_password)
 
         layout.addWidget(QLabel("Выберите сотрудника:"))
 
@@ -44,6 +49,10 @@ class AdminWindow(QWidget):
         layout.addWidget(self.report_btn)
 
         self.setLayout(layout)
+        
+    def open_change_password_window(self):
+        self.change_password_window = ChangePasswordWindow(self.admin_id)
+        self.change_password_window.show()
 
     def load_employees(self):
         conn = get_connection()
@@ -85,6 +94,8 @@ class AdminWindow(QWidget):
             records = cur.fetchall()
 
             self.output.clear()
+            
+            total_minutes_all = 0
 
             for record in records:
                 date, arrival, departure = record
@@ -92,10 +103,32 @@ class AdminWindow(QWidget):
                 arrival_str = arrival.strftime("%H:%M") if arrival else "---"
                 departure_str = departure.strftime("%H:%M") if departure else "---"
 
-                self.output.append(
-                    f"{date} | {arrival_str} - {departure_str}"
-                )
+                if arrival and departure:
+                    total_minutes = (
+                        departure.hour * 60 + departure.minute
+                    ) - (
+                        arrival.hour * 60 + arrival.minute
+                    )
 
+                    hours = total_minutes // 60
+                    minutes = total_minutes % 60
+
+                    word_time = f"{hours} ч {minutes} мин" if hours > 0 else f"{minutes} мин"
+
+                    total_minutes_all += total_minutes
+                else:
+                    word_time = "—"
+
+                self.output.append(
+                    f"{date.strftime('%d.%m.%Y')} | {arrival_str} - {departure_str} | {word_time}"
+                )
+                
+            total_hours = total_minutes_all // 60
+            total_minutes = total_minutes_all % 60
+            
+            self.output.append("\n-----------------------------------------")
+            self.output.append(f"Итого: {total_hours} ч {total_minutes} мин")
+                
         except Exception as e:
             QMessageBox.critical(self, "Ошибка", str(e))
 

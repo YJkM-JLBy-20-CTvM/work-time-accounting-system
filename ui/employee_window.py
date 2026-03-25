@@ -152,14 +152,40 @@ class EmployeeWindow(QWidget):
             records = cur.fetchall()
 
             self.output.clear()
+            
+            total_minutes_all = 0
 
             for record in records:
                 date, arrival, departure = record
-                arrival_str = arrival.strftime("%H:%M") if arrival else "—--"
-                departure_str = departure.strftime("%H:%M") if departure else "—--"
+                
+                arrival_str = arrival.strftime("%H:%M") if arrival else "---"
+                departure_str = departure.strftime("%H:%M") if departure else "---"
+                
+                if arrival and departure:
+                    total_minutes = (
+                        departure.hour * 60 + departure.minute
+                    ) - (
+                        arrival.hour * 60 - arrival.minute
+                    )
+                    
+                    hours = total_minutes // 60
+                    minutes = total_minutes % 60
+                    
+                    word_time = f"{hours} ч {minutes} мин" if hours > 0 else f"{minutes} мин"
+                
+                    total_minutes_all += total_minutes
+                else:
+                    word_time = "—"
+                
                 self.output.append(
-                    self.output.append(f"{date} | {arrival_str} - {departure_str}")
+                    f"{date.strftime('%d.%m.%Y')} | {arrival_str} - {departure_str} | {word_time}"
                 )
+                
+            total_hours = total_minutes_all // 60
+            total_minutes = total_minutes_all % 60
+            
+            self.output.append("\n-----------------------------------------")
+            self.output.append(f"Итого: {total_hours} ч {total_minutes} мин")
 
         except Exception as e:
             QMessageBox.critical(self, "Ошибка", str(e))
