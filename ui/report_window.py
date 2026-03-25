@@ -5,9 +5,7 @@ from PyQt5.QtWidgets import (
     QComboBox, QDateEdit, QFileDialog
 )
 from PyQt5.QtCore import QDate
-
 from db_connection import get_connection
-
 from docx import Document
 from datetime import datetime
 
@@ -193,7 +191,6 @@ class ReportWindow(QWidget):
             for i, row in enumerate(rows):
                 last_name, first_name, department, date, arrival, departure = row
 
-                # --- расчёт часов ---
                 if arrival and departure:
                     total_minutes = (
                         departure.hour * 60 + departure.minute
@@ -212,7 +209,7 @@ class ReportWindow(QWidget):
                     last_name,
                     first_name,
                     department,
-                    date,
+                    date.strftime("%d.%m.%Y"),
                     arrival.strftime("%H:%M") if arrival else "—",
                     departure.strftime("%H:%M") if departure else "—",
                     work_time
