@@ -68,17 +68,17 @@
 ├── main.py \
 ├── db_connection.py \
 ├── db_init.py \
-├── db_seed.py \
+├── db_insert.py \
 │ \
 ├── ui/ \
-│ ├── login_window.py \
-│ ├── employee_window.py \
 │ ├── admin_window.py \
-│ ├── report_window.py \
 │ ├── change_password_window.py \
-│ ├── crud_employees.py \
-│ ├── crud_departments.py \
-│ ├── crud_positions.py \
+│ ├── department_crud_window.py \
+│ ├── employee_crud_window.py \
+│ ├── employee_window.py \
+│ ├── login_window.py \
+│ ├── position_crud_window.py \
+│ ├── report_window.py \
 │ \
 └── README.md 
 
