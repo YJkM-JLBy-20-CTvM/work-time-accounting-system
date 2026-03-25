@@ -63,24 +63,24 @@
 
 ## Структура проекта
 
-Программа/
-│
-├── main.py
-├── db_connection.py
-├── db_init.py
-├── db_seed.py
-│
-├── ui/
-│ ├── login_window.py
-│ ├── employee_window.py
-│ ├── admin_window.py
-│ ├── report_window.py
-│ ├── change_password_window.py
-│ ├── crud_employees.py
-│ ├── crud_departments.py
-│ ├── crud_positions.py
-│
-└── README.md
+Программа/ 
+│ 
+├── main.py 
+├── db_connection.py 
+├── db_init.py 
+├── db_seed.py 
+│ 
+├── ui/ 
+│ ├── login_window.py 
+│ ├── employee_window.py 
+│ ├── admin_window.py 
+│ ├── report_window.py 
+│ ├── change_password_window.py 
+│ ├── crud_employees.py 
+│ ├── crud_departments.py 
+│ ├── crud_positions.py 
+│ 
+└── README.md 
 
 ---
 
@@ -142,7 +142,7 @@ python main.py
 
 user01 / 12345\
 frtur / 12345\
-arkady / 12345\
+arkady / 12345
 
 ## Безопасность
 
@@ -158,5 +158,5 @@ arkady / 12345\
 
 ## Автор
 
-Студент группы 23И-1
+Студент группы 23И-1\
 Орлов А.Д.
