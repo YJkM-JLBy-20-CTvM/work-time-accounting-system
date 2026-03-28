@@ -129,20 +129,45 @@ class EmployeeCRUD(QWidget):
         conn.close()
 
     def add_employee(self):
-        if not self.last_name_input.text() or not self.first_name_input.text():
+        last_name = self.last_name_input.text().strip()
+        first_name = self.first_name_input.text().strip()
+        username = self.username_input.text().strip()
+        password = self.password_input.text().strip()
+        
+        if not last_name or not first_name:
             QMessageBox.warning(self, "Ошибка", "Фамилия и имя обязательны")
+            return
+        
+        if not username:
+            QMessageBox.warning(self, "Ошибка", "Введите логин")
+            return
+        
+        if " " in username:
+            QMessageBox.warning(self, "Ошибка", "Логин не должен содержать пробелы")
+            return
+        
+        if len(username) < 4:
+            QMessageBox.warning(self, "Ошибка", "Логин должен быть не менее 4 символов")
+            return
+
+        if not password:
+            QMessageBox.warning(self, "Ошибка", "Введите пароль")
+            return
+        
+        if len(password) < 4:
+            QMessageBox.warning(self, "Ошибка", "Пароль должен быть не менее 4 символов")
             return
 
         hashed_password = hashlib.sha256(
-            self.password_input.text().encode()
+            password.encode()
         ).hexdigest()
 
         data = (
-            self.last_name_input.text(),
-            self.first_name_input.text(),
+            last_name,
+            first_name,
             self.middle_name_input.text(),
             self.phone_input.text(),
-            self.username_input.text(),
+            username,
             hashed_password,
             self.role_combo.currentText(),
             self.department_combo.currentData(),
@@ -152,28 +177,34 @@ class EmployeeCRUD(QWidget):
         conn = get_connection()
         cur = conn.cursor()
         
-        cur.execute("""
-                    SELECT 1 from employees WHERE username=%s
-                """, (self.username_input.text(),))
+        try:
+        
+            cur.execute("""
+                        SELECT 1 from employees WHERE username=%s
+                    """, (username,))
 
-        if cur.fetchone():
-            QMessageBox.warning(self, "Ошибка", "Пользователь с таким логином уже существует")
+            if cur.fetchone():
+                QMessageBox.warning(self, "Ошибка", "Пользователь с таким логином уже существует")
+                return
+
+            cur.execute("""
+                INSERT INTO employees (
+                    last_name, first_name, middle_name,
+                    phone, username, password, employee_role,
+                    department_id, position_id
+                )
+                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)
+            """, data)
+
+            conn.commit()
+            
+        except Exception as e:
+            conn.rollback()
+            QMessageBox.critical(self, "Ошибка", str(e))
+            
+        finally:
             cur.close()
             conn.close()
-            return
-
-        cur.execute("""
-            INSERT INTO employees (
-                last_name, first_name, middle_name,
-                phone, username, password, employee_role,
-                department_id, position_id
-            )
-            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)
-        """, data)
-
-        conn.commit()
-        cur.close()
-        conn.close()
 
         self.load_data()
 
