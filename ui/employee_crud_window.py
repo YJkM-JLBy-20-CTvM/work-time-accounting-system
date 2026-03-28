@@ -151,6 +151,16 @@ class EmployeeCRUD(QWidget):
 
         conn = get_connection()
         cur = conn.cursor()
+        
+        cur.execute("""
+                    SELECT 1 from employees WHERE username=%s
+                """, (self.username_input.text(),))
+
+        if cur.fetchone():
+            QMessageBox.warning(self, "Ошибка", "Пользователь с таким логином уже существует")
+            cur.close()
+            conn.close()
+            return
 
         cur.execute("""
             INSERT INTO employees (
