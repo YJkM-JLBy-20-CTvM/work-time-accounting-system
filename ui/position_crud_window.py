@@ -129,7 +129,14 @@ class PositionCRUD(QWidget):
             conn = get_connection()
             cur = conn.cursor()
 
-            cur.execute("DELETE FROM positions WHERE position_id=%s", (pos_id,))
+            try:
+                cur.execute("""
+                    DELETE FROM positions 
+                    WHERE position_id=%s""", 
+                    (pos_id,))
+            except Exception as e:
+                QMessageBox.critical(self, "Ошибка", f"Невозможно удалить должность: есть связанные сотрудники")
+                return
 
             conn.commit()
             cur.close()

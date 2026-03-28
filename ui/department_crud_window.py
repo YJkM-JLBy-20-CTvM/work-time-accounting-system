@@ -129,7 +129,14 @@ class DepartmentCRUD(QWidget):
             conn = get_connection()
             cur = conn.cursor()
 
-            cur.execute("DELETE FROM departments WHERE department_id=%s", (dep_id,))
+            try:
+                cur.execute("""
+                    DELETE FROM departments 
+                    WHERE department_id=%s""", 
+                    (dep_id,))
+            except Exception as e:
+                QMessageBox.critical(self, "Ошибка", f"Невозможно удалить отдел: есть связанные сотрудники")
+                return
 
             conn.commit()
             cur.close()
