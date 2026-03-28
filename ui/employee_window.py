@@ -116,6 +116,10 @@ class EmployeeWindow(QWidget):
                 QMessageBox.warning(self, "Ошибка", "Уход уже отмечен")
                 return
             
+            if time < self.arrival_time_edit.time().toString("HH:mm"):
+                QMessageBox.warning(self, "Ошибка", "Время ухода не может быть раньше времени прихода")
+                return
+            
             cur.execute("""
                 UPDATE work_time_accounting
                 SET departure_time = %s
