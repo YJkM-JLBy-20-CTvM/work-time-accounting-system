@@ -15,7 +15,9 @@ cur.execute("""
 cur.execute("""
     CREATE TABLE IF NOT EXISTS positions(
         position_id SERIAL PRIMARY KEY,
-        position_name VARCHAR(100) NOT NULL
+        position_name VARCHAR(100) NOT NULL,
+        department_id INTEGER NOT NULL,
+        FOREIGN KEY (department_id) REFERENCES departments (department_id)
     );
 """)
 
@@ -67,8 +69,8 @@ if not admin_exists:
     department_id = cur.fetchone()[0]
 
     cur.execute("""
-        INSERT INTO positions (position_name)
-        VALUES ('Системный администратор')
+        INSERT INTO positions (position_name, department_id)
+        VALUES ('Системный администратор', '1')
         RETURNING position_id;
     """)
     position_id = cur.fetchone()[0]

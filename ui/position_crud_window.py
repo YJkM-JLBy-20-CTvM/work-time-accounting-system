@@ -2,7 +2,7 @@ from PyQt5.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout,
     QLineEdit, QLabel, QPushButton,
     QTableWidget, QTableWidgetItem,
-    QMessageBox
+    QMessageBox, QComboBox
 )
 from db_connection import get_connection
 
@@ -12,18 +12,23 @@ class PositionCRUD(QWidget):
         super().__init__()
 
         self.setWindowTitle("Должности")
-        self.resize(500, 400)
+        self.resize(600, 400)
 
         self.table = QTableWidget()
-        self.table.setColumnCount(2)
-        self.table.setHorizontalHeaderLabels(["ID", "Название"])
+        self.table.setColumnCount(3)
+        self.table.setHorizontalHeaderLabels(["ID", "Название", "Отдел"])
 
         self.name_input = QLineEdit()
+        
+        self.department_combo = QComboBox()
+        self.load_departments()
 
         form_layout = QHBoxLayout()
         form_layout.addWidget(QLabel("Название"))
         form_layout.addWidget(self.name_input)
-
+        form_layout.addWidget(QLabel("Отдел"))
+        form_layout.addWidget(self.department_combo)
+        
         self.add_btn = QPushButton("Добавить")
         self.update_btn = QPushButton("Изменить")
         self.delete_btn = QPushButton("Удалить")
@@ -46,27 +51,58 @@ class PositionCRUD(QWidget):
 
         self.load_data()
 
+    def load_departments(self):
+        conn = get_connection()
+        cur = conn.cursor()
+        
+        try:
+            self.department_combo.clear()
+            
+            cur.execute("SELECT department_id, department_name FROM departments")
+            
+            for dep_id, name in cur.fetchall():
+                self.department_combo.addItem(name, dep_id)
+                
+        except Exception as e:
+            QMessageBox.critical(self, "Ошибка", str(e))
+            
+        finally:
+            cur.close()
+
     def load_data(self):
         conn = get_connection()
         cur = conn.cursor()
 
-        cur.execute("SELECT * FROM positions ORDER BY position_id")
-        rows = cur.fetchall()
+        try:
 
-        self.table.setRowCount(len(rows))
+            cur.execute("""
+                SELECT p.position_id, p.position_name, d.department_name 
+                FROM positions p
+                JOIN departments d ON p.department_id = d.department_id
+                ORDER BY position_id""")
+            
+            rows = cur.fetchall()
+            self.table.setRowCount(len(rows))
 
-        for i, row in enumerate(rows):
-            for j, value in enumerate(row):
-                self.table.setItem(i, j, QTableWidgetItem(str(value)))
+            for i, row in enumerate(rows):
+                for j, value in enumerate(row):
+                    self.table.setItem(i, j, QTableWidgetItem(str(value)))
+        
+        except Exception as e:
+            QMessageBox.critical(self, "Ошибка", str(e))
 
-        cur.close()
-        conn.close()
+        finally:
+            cur.close()
+            conn.close()
 
     def fill_input(self, row, _):
         self.name_input.setText(self.table.item(row, 1).text())
+        department_name = self.table.item(row, 2).text()
+        self.department_combo.setCurrentText(department_name)
 
     def add_position(self):
         name = self.name_input.text()
+        department_id = self.department_combo.currentData()
 
         if not name:
             QMessageBox.warning(self, "Ошибка", "Введите название")
@@ -75,14 +111,21 @@ class PositionCRUD(QWidget):
         conn = get_connection()
         cur = conn.cursor()
 
-        cur.execute(
-            "INSERT INTO positions (position_name) VALUES (%s)",
-            (name,)
-        )
+        try:
+            cur.execute(
+                "INSERT INTO positions (position_name, department_id) VALUES (%s, %s)",
+                (name, department_id)
+            )
 
-        conn.commit()
-        cur.close()
-        conn.close()
+            conn.commit()
+            
+        except Exception as e:
+            conn.rollback()
+            QMessageBox.critical(self, "Ошибка", str(e))
+            
+        finally:
+            cur.close()
+            conn.close()
 
         self.load_data()
 
@@ -94,19 +137,33 @@ class PositionCRUD(QWidget):
             return
 
         pos_id = int(self.table.item(selected, 0).text())
-        name = self.name_input.text()
+        name = self.name_input.text().strip()
+        department_id = self.department_combo.currentData()
+        
+        if not name:
+            QMessageBox.warning(self, "Ошибка", "Выберите запись")
+            return
 
         conn = get_connection()
         cur = conn.cursor()
 
-        cur.execute(
-            "UPDATE positions SET position_name=%s WHERE position_id=%s",
-            (name, pos_id)
-        )
+        try:
+            cur.execute("""
+                UPDATE positions 
+                SET position_name=%s, department_id=%s 
+                WHERE position_id=%s,
+                """, (name, department_id, pos_id)
+            )
 
-        conn.commit()
-        cur.close()
-        conn.close()
+            conn.commit()
+            
+        except Exception as e:
+            conn.rollback()
+            QMessageBox.critical(self, "Ошибка", str(e))
+            
+        finally:    
+            cur.close()
+            conn.close()
 
         self.load_data()
 

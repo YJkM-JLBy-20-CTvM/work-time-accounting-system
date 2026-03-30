@@ -38,7 +38,11 @@ class EmployeeCRUD(QWidget):
         self.position_combo = QComboBox()
 
         self.load_departments()
-        self.load_positions()
+
+        self.department_combo.currentIndexChanged.connect(self.on_department_changed)
+
+        if self.department_combo.count() > 0:
+            self.on_department_changed()
 
         form_layout = QHBoxLayout()
 
@@ -85,7 +89,8 @@ class EmployeeCRUD(QWidget):
 
         cur.execute("""
             SELECT e.employee_id, e.last_name, e.first_name, e.middle_name,
-                   e.phone, e.username, e.password, e.employee_role, d.department_name, p.position_name
+                   e.phone, e.username, e.password, e.employee_role,
+                   d.department_name, p.position_name
             FROM employees e
             JOIN departments d ON e.department_id = d.department_id
             JOIN positions p ON e.position_id = p.position_id
@@ -107,45 +112,60 @@ class EmployeeCRUD(QWidget):
         cur = conn.cursor()
 
         cur.execute("SELECT department_id, department_name FROM departments")
-        self.departments = cur.fetchall()
+        self.department_combo.clear()
 
-        for dep in self.departments:
-            self.department_combo.addItem(dep[1], dep[0])
+        for dep_id, name in cur.fetchall():
+            self.department_combo.addItem(name, dep_id)
 
         cur.close()
         conn.close()
 
-    def load_positions(self):
+    def load_positions_by_department(self, department_id):
         conn = get_connection()
         cur = conn.cursor()
 
-        cur.execute("SELECT position_id, position_name FROM positions")
-        self.positions = cur.fetchall()
+        try:
+            self.position_combo.clear()
 
-        for pos in self.positions:
-            self.position_combo.addItem(pos[1], pos[0])
+            cur.execute("""
+                SELECT position_id, position_name
+                FROM positions
+                WHERE department_id = %s
+            """, (department_id,))
 
-        cur.close()
-        conn.close()
+            for pos_id, name in cur.fetchall():
+                self.position_combo.addItem(name, pos_id)
+
+        except Exception as e:
+            QMessageBox.critical(self, "Ошибка", str(e))
+
+        finally:
+            cur.close()
+            conn.close()
+
+    def on_department_changed(self):
+        department_id = self.department_combo.currentData()
+        if department_id:
+            self.load_positions_by_department(department_id)
 
     def add_employee(self):
         last_name = self.last_name_input.text().strip()
         first_name = self.first_name_input.text().strip()
         username = self.username_input.text().strip()
         password = self.password_input.text().strip()
-        
+
         if not last_name or not first_name:
             QMessageBox.warning(self, "Ошибка", "Фамилия и имя обязательны")
             return
-        
+
         if not username:
             QMessageBox.warning(self, "Ошибка", "Введите логин")
             return
-        
+
         if " " in username:
             QMessageBox.warning(self, "Ошибка", "Логин не должен содержать пробелы")
             return
-        
+
         if len(username) < 4:
             QMessageBox.warning(self, "Ошибка", "Логин должен быть не менее 4 символов")
             return
@@ -153,14 +173,12 @@ class EmployeeCRUD(QWidget):
         if not password:
             QMessageBox.warning(self, "Ошибка", "Введите пароль")
             return
-        
+
         if len(password) < 4:
             QMessageBox.warning(self, "Ошибка", "Пароль должен быть не менее 4 символов")
             return
 
-        hashed_password = hashlib.sha256(
-            password.encode()
-        ).hexdigest()
+        hashed_password = hashlib.sha256(password.encode()).hexdigest()
 
         data = (
             last_name,
@@ -176,15 +194,11 @@ class EmployeeCRUD(QWidget):
 
         conn = get_connection()
         cur = conn.cursor()
-        
-        try:
-        
-            cur.execute("""
-                        SELECT 1 from employees WHERE username=%s
-                    """, (username,))
 
+        try:
+            cur.execute("SELECT 1 FROM employees WHERE username=%s", (username,))
             if cur.fetchone():
-                QMessageBox.warning(self, "Ошибка", "Пользователь с таким логином уже существует")
+                QMessageBox.warning(self, "Ошибка", "Логин уже существует")
                 return
 
             cur.execute("""
@@ -197,11 +211,11 @@ class EmployeeCRUD(QWidget):
             """, data)
 
             conn.commit()
-            
+
         except Exception as e:
             conn.rollback()
             QMessageBox.critical(self, "Ошибка", str(e))
-            
+
         finally:
             cur.close()
             conn.close()
@@ -214,14 +228,18 @@ class EmployeeCRUD(QWidget):
         self.middle_name_input.setText(self.table.item(row, 3).text())
         self.phone_input.setText(self.table.item(row, 4).text())
         self.username_input.setText(self.table.item(row, 5).text())
-        # self.password_input.setText(self.table.item(row, 6).text())
+
         role = self.table.item(row, 7).text()
         dep = self.table.item(row, 8).text()
         pos = self.table.item(row, 9).text()
+
         self.role_combo.setCurrentText(role)
         self.department_combo.setCurrentText(dep)
+
+        self.on_department_changed()
+
         self.position_combo.setCurrentText(pos)
-        
+
     def update_employee(self):
         selected = self.table.currentRow()
         if selected < 0:
