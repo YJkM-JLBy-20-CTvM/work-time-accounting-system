@@ -8,7 +8,6 @@ try:
     cur.execute("""
         INSERT INTO departments (department_name)
         VALUES 
-        ('IT'),
         ('Бухгалтерия'),
         ('Отдел кадров'),
         ('Маркетинг'),
@@ -21,7 +20,6 @@ try:
         VALUES 
         ('Разработчик'),
         ('Тестировщик'),
-        ('Системный администратор'),
         ('Бухгалтер'),
         ('HR-менеджер'),
         ('Маркетолог'),
@@ -56,24 +54,25 @@ try:
     """, (hash_pass("12345"), it_dep, admin_pos))
 
     employees = [
-        ("Петров", "Альберт", "Иванович", "user01", "12345"),
-        ("Савельев", "Артур", "Петрович", "frtur", "12345"),
-        ("Баранов", "Аркадий", "Сидорович", "arkady11", "12345"),
+        ("Петров", "Альберт", "Иванович", "89008007766", "user01", "12345"),
+        ("Савельев", "Артур", "Петрович", "89008007767", "user02", "12345"),
+        ("Баранов", "Аркадий", "Сидорович", "89008007768", "user03", "12345"),
     ]
 
-    for last, first, middle, username, password in employees:
+    for last, first, middle, phone, username, password in employees:
         cur.execute("""
             INSERT INTO employees (
                 last_name, first_name, middle_name,
                 phone, username, password,
                 employee_role, department_id, position_id
             )
-            VALUES (%s, %s, %s, '', %s, %s, 'employee', %s, %s)
+            VALUES (%s, %s, %s, %s, %s, %s, 'employee', %s, %s)
             ON CONFLICT (username) DO NOTHING;
         """, (
             last,
             first,
             middle,
+            phone,
             username,
             hash_pass(password),
             it_dep,
