@@ -177,6 +177,10 @@ class EmployeeCRUD(QWidget):
         if len(password) < 4:
             QMessageBox.warning(self, "Ошибка", "Пароль должен быть не менее 4 символов")
             return
+        
+        if " " in password:
+            QMessageBox.warning(self, "Ошибка", "Пароль не должен содержать пробелы")
+            return
 
         hashed_password = hashlib.sha256(password.encode()).hexdigest()
 
@@ -248,31 +252,89 @@ class EmployeeCRUD(QWidget):
 
         employee_id = int(self.table.item(selected, 0).text())
 
-        data = (
-            self.last_name_input.text(),
-            self.first_name_input.text(),
-            self.middle_name_input.text(),
-            self.phone_input.text(),
-            self.role_combo.currentText(),
-            self.department_combo.currentData(),
-            self.position_combo.currentData(),
-            employee_id
-        )
+        last_name = self.last_name_input.text().strip()
+        first_name = self.first_name_input.text().strip()
+        username = self.username_input.text().strip()
+        password = self.password_input.text().strip()
+
+        if not last_name or not first_name:
+            QMessageBox.warning(self, "Ошибка", "Фамилия и имя обязательны")
+            return
+
+        if not username:
+            QMessageBox.warning(self, "Ошибка", "Введите логин")
+            return
+
+        if " " in username:
+            QMessageBox.warning(self, "Ошибка", "Логин не должен содержать пробелы")
+            return
+
+        if len(username) < 4:
+            QMessageBox.warning(self, "Ошибка", "Логин должен быть не менее 4 символов")
+            return
+
+        if not password:
+            QMessageBox.warning(self, "Ошибка", "Введите пароль")
+            return
+
+        if len(password) < 4:
+            QMessageBox.warning(self, "Ошибка", "Пароль должен быть не менее 4 символов")
+            return
+
+        if " " in password:
+            QMessageBox.warning(self, "Ошибка", "Пароль не должен содержать пробелы")
+            return
+
+        hashed_password = hashlib.sha256(password.encode()).hexdigest()
 
         conn = get_connection()
         cur = conn.cursor()
 
-        cur.execute("""
-            UPDATE employees
-            SET last_name=%s, first_name=%s, middle_name=%s,
-                phone=%s, employee_role=%s,
-                department_id=%s, position_id=%s
-            WHERE employee_id=%s
-        """, data)
+        try:
+            cur.execute("""
+                SELECT 1 FROM employees 
+                WHERE username=%s AND employee_id != %s
+            """, (username, employee_id))
 
-        conn.commit()
-        cur.close()
-        conn.close()
+            if cur.fetchone():
+                QMessageBox.warning(self, "Ошибка", "Логин уже занят")
+                return
+
+            cur.execute("""
+                UPDATE employees
+                SET last_name=%s,
+                    first_name=%s,
+                    middle_name=%s,
+                    phone=%s,
+                    username=%s,
+                    password=%s,
+                    employee_role=%s,
+                    department_id=%s,
+                    position_id=%s
+                WHERE employee_id=%s
+            """, (
+                last_name,
+                first_name,
+                self.middle_name_input.text(),
+                self.phone_input.text(),
+                username,
+                hashed_password,
+                self.role_combo.currentText(),
+                self.department_combo.currentData(),
+                self.position_combo.currentData(),
+                employee_id
+            ))
+
+            conn.commit()
+            QMessageBox.information(self, "Успех", "Данные обновлены")
+
+        except Exception as e:
+            conn.rollback()
+            QMessageBox.critical(self, "Ошибка", str(e))
+
+        finally:
+            cur.close()
+            conn.close()
 
         self.load_data()
 

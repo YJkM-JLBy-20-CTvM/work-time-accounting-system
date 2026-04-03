@@ -1,7 +1,8 @@
 from PyQt5.QtWidgets import (
     QWidget, QVBoxLayout, QLabel, QPushButton,
-    QComboBox, QTextEdit, QMessageBox
+    QComboBox, QTextEdit, QMessageBox, QDateEdit, QHBoxLayout
 )
+from PyQt5.QtCore import QDate
 from db_connection import get_connection
 from ui.employee_crud_window import EmployeeCRUD
 from ui.department_crud_window import DepartmentCRUD
@@ -17,10 +18,10 @@ class AdminWindow(QWidget):
         self.admin_id = admin_id
 
         self.setWindowTitle("Окно администратора")
-        self.resize(500, 500)
+        self.resize(500, 550)
 
         layout = QVBoxLayout()
-        
+
         self.bnt_change_password = QPushButton("Сменить пароль")
         self.bnt_change_password.clicked.connect(self.open_change_password_window)
         layout.addWidget(self.bnt_change_password)
@@ -31,6 +32,23 @@ class AdminWindow(QWidget):
         layout.addWidget(self.employee_combo)
 
         self.load_employees()
+
+        date_layout = QHBoxLayout()
+
+        self.date_from = QDateEdit()
+        self.date_from.setCalendarPopup(True)
+        self.date_from.setDate(QDate.currentDate().addMonths(-1))
+
+        self.date_to = QDateEdit()
+        self.date_to.setCalendarPopup(True)
+        self.date_to.setDate(QDate.currentDate())
+
+        date_layout.addWidget(QLabel("С:"))
+        date_layout.addWidget(self.date_from)
+        date_layout.addWidget(QLabel("По:"))
+        date_layout.addWidget(self.date_to)
+
+        layout.addLayout(date_layout)
 
         self.btn_view = QPushButton("Посмотреть рабочее время")
         self.btn_view.clicked.connect(self.view_employee_time)
@@ -64,10 +82,7 @@ class AdminWindow(QWidget):
                 FROM employees
             """)
 
-            self.employees = cur.fetchall()
-
-            for emp in self.employees:
-                emp_id, last, first = emp
+            for emp_id, last, first in cur.fetchall():
                 self.employee_combo.addItem(f"{last} {first}", emp_id)
 
         except Exception as e:
@@ -80,6 +95,9 @@ class AdminWindow(QWidget):
     def view_employee_time(self):
         employee_id = self.employee_combo.currentData()
 
+        date_from = self.date_from.date().toPyDate()
+        date_to = self.date_to.date().toPyDate()
+
         conn = get_connection()
         cur = conn.cursor()
 
@@ -88,8 +106,9 @@ class AdminWindow(QWidget):
                 SELECT record_date, arrival_time, departure_time
                 FROM work_time_accounting
                 WHERE employee_id = %s
+                AND record_date BETWEEN %s AND %s
                 ORDER BY record_date DESC
-            """, (employee_id,))
+            """, (employee_id, date_from, date_to))
 
             records = cur.fetchall()
 
@@ -122,12 +141,12 @@ class AdminWindow(QWidget):
                 self.output.append(
                     f"{date.strftime('%d.%m.%Y')} | {arrival_str} - {departure_str} | {word_time}"
                 )
-                
+
             total_hours = total_minutes_all // 60
             total_minutes = total_minutes_all % 60
             
             self.output.append("\n-----------------------------------------")
-            self.output.append(f"Итого: {total_hours} ч {total_minutes} мин")
+            self.output.append(f"Итого за период: {total_hours} ч {total_minutes} мин")
                 
         except Exception as e:
             QMessageBox.critical(self, "Ошибка", str(e))

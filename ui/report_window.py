@@ -113,13 +113,15 @@ class ReportWindow(QWidget):
 
             query = """
                 SELECT e.employee_id,
-                    e.last_name, e.first_name,
-                    d.department_name,
-                    w.record_date,
-                    w.arrival_time,
-                    w.departure_time
+                       e.last_name, e.first_name,
+                       d.department_name,
+                       p.position_name,
+                       w.record_date,
+                       w.arrival_time,
+                       w.departure_time
                 FROM employees e
                 JOIN departments d ON e.department_id = d.department_id
+                JOIN positions p ON e.position_id = p.position_id
                 JOIN work_time_accounting w ON e.employee_id = w.employee_id
                 WHERE w.record_date BETWEEN %s AND %s
             """
@@ -167,7 +169,7 @@ class ReportWindow(QWidget):
             doc.add_paragraph("")
 
             headers = [
-                "Фамилия", "Имя", "Отдел",
+                "Фамилия", "Имя", "Отдел", "Должность",
                 "Дата", "Приход", "Уход", "Часы"
             ]
 
@@ -178,11 +180,14 @@ class ReportWindow(QWidget):
                 table.cell(0, col).text = header
 
             employee_totals = {}
+            employee_names = {}
 
             total_minutes_all = 0
 
             for i, row in enumerate(rows):
-                emp_id, last_name, first_name, department, date, arrival, departure = row
+                emp_id, last_name, first_name, department, position, date, arrival, departure = row
+
+                employee_names[emp_id] = f"{last_name} {first_name}"
 
                 if arrival and departure:
                     total_minutes = (
@@ -209,6 +214,7 @@ class ReportWindow(QWidget):
                     last_name,
                     first_name,
                     department,
+                    position,
                     date.strftime("%d.%m.%Y"),
                     arrival.strftime("%H:%M") if arrival else "—",
                     departure.strftime("%H:%M") if departure else "—",
@@ -224,14 +230,9 @@ class ReportWindow(QWidget):
                 hours = minutes // 60
                 mins = minutes % 60
 
-                cur.execute("""
-                    SELECT last_name, first_name
-                    FROM employees
-                    WHERE employee_id = %s
-                """, (emp_id,))
-                last, first = cur.fetchone()
+                name = employee_names.get(emp_id, "Неизвестно")
 
-                doc.add_paragraph(f"{last} {first}: {hours} ч {mins} мин")
+                doc.add_paragraph(f"{name}: {hours} ч {mins} мин")
 
             total_hours = total_minutes_all // 60
             total_minutes = total_minutes_all % 60

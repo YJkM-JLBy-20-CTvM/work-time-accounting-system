@@ -40,7 +40,15 @@ class ChangePasswordWindow(QWidget):
         if not old_pass or not new_pass:
             QMessageBox.warning(self, "Ошибка", "Заполните все поля")
             return
-
+        
+        if len(new_pass) < 4:
+            QMessageBox.warning(self, "Ошибка", "Пароль должен быть не менее 4 символов")
+            return
+        
+        if " " in new_pass:
+            QMessageBox.warning(self, "Ошибка", "Пароль не должен содержать пробелы")
+            return
+ 
         conn = get_connection()
         cur = conn.cursor()
 
